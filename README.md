@@ -1,0 +1,1 @@
+This is the minimum required to deploy fast api on azure.
