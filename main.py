@@ -1,28 +1,26 @@
-from enum import Enum
+from typing import List
 
-from fastapi import FastAPI
+from fastapi import FastAPI, status, Depends
+from sqlalchemy.orm import Session
+from src import models, schemas
+from src.database import SessionLocal, engine
+
+models.Base.metadata.create_all(bind=engine)
 
 
-class ModelName(str, Enum):
-    alexnet = "alexnet"
-    resnet = "resnet"
-    lenet = "lenet"
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 app = FastAPI()
 
 
-@app.get("/items/{item_id}")
-async def read_item(item_id: int, skip: int = 0, limit: int = 10):
-    return {"item_id": item_id, "skip": skip, "limit": limit}
-
-
-@app.get("/models/{model_name}")
-async def get_model(model_name: ModelName):
-    if model_name == ModelName.alexnet:
-        return {"model_name": model_name, "message": "Deep Learning FTW!"}
-
-    if model_name.value == "lenet":
-        return {"model_name": model_name, "message": "LeCNN all the images"}
-
-    return {"model_name": model_name, "message": "Have some residuals"}
+@app.get("/customers/", response_model=List[schemas.Customers],
+         status_code=status.HTTP_200_OK)
+def read_customers(skip: int = 0, limit: int = 100,
+                   db: Session = Depends(get_db)):
+    return db.query(models.Customers).offset(skip).limit(limit).all()
